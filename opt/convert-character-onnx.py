@@ -52,3 +52,35 @@ for epoch in range(10):
 # convert to ONNX format
 print("Converting to ONNX format")
 torch.onnx.export(model, torch.randn(1, 1, 28, 28), "model.onnx")
+
+# split train and validation data
+train_size = int(len(emnist_data) * 0.8)
+val_size = len(emnist_data) - train_size
+train_dataset, val_dataset = torch.utils.data.random_split(emnist_data, [train_size, val_size])
+
+train_loader = torch.utils.data.DataLoader(train_dataset, batch_size=4, shuffle=True)
+val_loader = torch.utils.data.DataLoader(val_dataset, batch_size=4, shuffle=True)
+
+# train model
+for epoch in range(10):
+    for data, target in train_loader:
+        optimizer.zero_grad()
+        output = model(data)
+        loss = criterion(output, target)
+        loss.backward()
+        optimizer.step()
+
+# Evaluate on validation set
+val_loss = 0
+correct = 0
+with torch.no_grad():
+    for data, target in val_loader:
+        output = model(data)
+        val_loss += criterion(output, target).item()
+        pred = output.argmax(dim=1, keepdim=True)
+        correct += pred.eq(target.view_as(pred)).sum().item()
+
+val_loss /= len(val_dataset)
+val_acc = correct / len(val_dataset)
+
+print('Validation set: Average loss: {:.4f}, Accuracy: {:.2f}%'.format(val_loss, val_acc * 100))
